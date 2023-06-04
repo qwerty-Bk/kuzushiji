@@ -17,7 +17,7 @@ def draw_bboxes(image, bboxes, labels, order='xywh', mode='pixels'):
     rgb = (255, 0, 0)
     for i, [x0, y0, x1, y1] in enumerate(bboxes):
         class_i = int(labels[i].item())
-        if class_i == -1:
+        if x0 + y0 + x1 + y1 <= 0:
             break
         if mode == 'pixels':
             a0, b0, a1, b1 = x0, y0, x0 + x1, y0 + y1
