@@ -59,7 +59,8 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50):
     for i, bbox in enumerate(bboxes):
         if fill_i == max_labels:
             break
-        intersec = (min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0])) * (min(y1, bbox[1] + bbox[3]) - max(y0, bbox[1]))
+        intersec = max(0, min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0])) * \
+                   max(0, min(y1, bbox[1] + bbox[3]) - max(y0, bbox[1]))
         if intersec / bbox[2] / bbox[3] > thresh:
             new_bboxes[fill_i] = torch.Tensor([max(x0, bbox[0]) - x0, max(y0, bbox[1]) - y0,
                                                min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0]),
@@ -100,7 +101,8 @@ class DetectionDataset(Dataset):
             bboxes = (bboxes.astype(float) * ratio).astype(int)
             image = image.resize((int(image.width * ratio), int(image.height * ratio)))
         # note that the boxes after this line might go over the borders (if we have to crop them, we have to change the new_boxxes.append line in ourCrop)
-        image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size, self.threshold)
+        image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size,
+                                        self.threshold)
         if self.transforms is not None:
             image = self.transforms(image)
         return image, bboxes, torch.LongTensor(labels)
