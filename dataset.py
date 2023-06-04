@@ -54,7 +54,7 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50):
     x0, y0 = randint(0, w - n_w), randint(0, h - n_h)
     x1, y1 = x0 + n_w, y0 + n_h
     new_bboxes = torch.full((max_labels, 4), -1)
-    new_labels = torch.full((max_labels,), -1)
+    new_labels = torch.full((max_labels, 1), -1)
     fill_i = 0
     for i, bbox in enumerate(bboxes):
         if i == max_labels:
