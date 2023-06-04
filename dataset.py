@@ -57,11 +57,13 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50):
     new_labels = torch.full((max_labels, 1), -1)
     fill_i = 0
     for i, bbox in enumerate(bboxes):
-        if i == max_labels:
+        if fill_i == max_labels:
             break
         intersec = (min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0])) * (min(y1, bbox[1] + bbox[3]) - max(y0, bbox[1]))
         if intersec / bbox[2] / bbox[3] > thresh:
-            new_bboxes[fill_i] = torch.Tensor([bbox[0] - x0, bbox[1] - y0, bbox[2], bbox[3]])
+            new_bboxes[fill_i] = torch.Tensor([max(x0, bbox[0]) - x0, max(y0, bbox[1]) - y0,
+                                               min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0]),
+                                               min(y1, bbox[1] + bbox[3]) - max(y0, bbox[1])])
             new_labels[fill_i] = labels[i]
             fill_i += 1
     if isinstance(image, torch.Tensor) or isinstance(image, np.ndarray):
