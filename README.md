@@ -17,7 +17,7 @@ with open('/root/.kaggle/kaggle.json', 'w') as file:
 !chmod 600 ~/.kaggle/kaggle.json
 ```
 
-Clone github repo
+Clone github repo:
 ```
 !git clone https://github.com/qwerty-Bk/kuzushiji.git
 ```
