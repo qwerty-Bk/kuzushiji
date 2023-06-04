@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from tqdm.notebook import tqdm
 
 
-uni2sym_df = pd.read_csv('./unicode_translation.csv')
+uni2sym_df = pd.read_csv('./data/unicode_translation.csv')
 forgotten = [{'Unicode': 'U+770C', 'char': '県'},
              {'Unicode': 'U+4FA1', 'char': '価'},
              {'Unicode': 'U+7A83', 'char': '窃'},
@@ -20,11 +20,11 @@ uni2class = dict(zip(uni2sym_df.Unicode, uni2sym_df.index.tolist()))
 class2sym = dict(zip(uni2sym_df.index.tolist(), uni2sym_df.char))
 
 
-def load_data(split):
+def load_data(split, path):
     assert split in ('train', 'test')
     csv_split = 'train' if split == 'train' else 'sample_submission'
-    df = pd.read_csv(f'./{csv_split}.csv', keep_default_na=False)
-    image_path = Path(f'./data/{split}')
+    df = pd.read_csv(f'{path}/{csv_split}.csv', keep_default_na=False)
+    image_path = Path(f'{path}/{split}')
 
     images = []
     for id, row in tqdm(df.iterrows(), total=len(df)):
@@ -77,7 +77,7 @@ class DetectionDataset(Dataset):
         if isinstance(crop_size, int):
             crop_size = (crop_size, crop_size)
         if isinstance(images, str):
-            self.images = load_data(images)
+            self.images = load_data(images, 'data')
         else:
             self.images = images
         self.max_size = max_size
