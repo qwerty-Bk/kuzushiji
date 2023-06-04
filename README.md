@@ -17,8 +17,14 @@ with open('/root/.kaggle/kaggle.json', 'w') as file:
 !chmod 600 ~/.kaggle/kaggle.json
 ```
 
+Clone github repo
+```
+!git clone https://github.com/qwerty-Bk/kuzushiji.git
+```
+
 Download & unzip data:
 ``` 
+%cd kuzushiji
 !kaggle competitions download -c kuzushiji-recognition
 !unzip kuzushiji-recognition.zip
 %cd /content
@@ -37,5 +43,7 @@ Download & unzip data:
 
 Font for Japanese:
 ```
+%cd ..
 !gdown --id 1prRT49D1yJFGo75oxpbYgPOfXnecKMtM
+%cd contenT/kuzushiji
 ```
