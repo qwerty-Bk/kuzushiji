@@ -45,5 +45,5 @@ Font for Japanese:
 ```
 %cd ..
 !gdown --id 1prRT49D1yJFGo75oxpbYgPOfXnecKMtM
-%cd contenT/kuzushiji
+%cd content/kuzushiji
 ```
