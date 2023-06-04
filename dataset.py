@@ -50,19 +50,22 @@ def load_data(split, path):
     return images
 
 
-def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33):
+def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50):
     x0, y0 = randint(0, w - n_w), randint(0, h - n_h)
     x1, y1 = x0 + n_w, y0 + n_h
-    new_bboxes = []
-    new_labels = []
-    # print('crop', x0, y0, x1, y1)
+    new_bboxes = torch.full((max_labels, 4), 0)
+    new_labels = torch.full((max_labels, 1), 0)
+    fill_i = 0
     for i, bbox in enumerate(bboxes):
-        # print(bbox)
+        if fill_i == max_labels:
+            break
         intersec = (min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0])) * (min(y1, bbox[1] + bbox[3]) - max(y0, bbox[1]))
         if intersec / bbox[2] / bbox[3] > thresh:
-        # if bbox[0] >= x0 and bbox[1] >= y0 and bbox[0] + bbox[2] <= x1 and bbox[1] + bbox[3] <= y1:
-            new_bboxes.append(np.array([bbox[0] - x0, bbox[1] - y0, bbox[2], bbox[3]]))
-            new_labels.append(labels[i])
+            new_bboxes[fill_i] = torch.Tensor([max(x0, bbox[0]) - x0, max(y0, bbox[1]) - y0,
+                                               min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0]),
+                                               min(y1, bbox[1] + bbox[3]) - max(y0, bbox[1])])
+            new_labels[fill_i] = labels[i]
+            fill_i += 1
     if isinstance(image, torch.Tensor) or isinstance(image, np.ndarray):
         new_image = image[x0:x1, y0:y1]
     elif isinstance(image, Image.Image):
@@ -100,4 +103,4 @@ class DetectionDataset(Dataset):
         image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size, self.threshold)
         if self.transforms is not None:
             image = self.transforms(image)
-        return image, bboxes, labels
+        return image, bboxes, torch.LongTensor(labels)
