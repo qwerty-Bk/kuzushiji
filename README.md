@@ -27,18 +27,17 @@ Download & unzip data:
 %cd kuzushiji
 !kaggle competitions download -c kuzushiji-recognition
 !unzip kuzushiji-recognition.zip
-%cd /content
 !mkdir data
 %cd data
 !mkdir train
 %cd train
-!unzip /content/train_images.zip
-%cd /content
+!unzip /content/kuzushiji/train_images.zip
+%cd /content/kuzushiji/
 %cd data
 !mkdir test
 %cd test
-!unzip /content/test_images.zip
-%cd /content
+!unzip /content/kuzushiji/test_images.zip
+%cd /content/kuzushiji
 ```
 
 Font for Japanese:
