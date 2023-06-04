@@ -84,7 +84,8 @@ class DetectionDataset(Dataset):
         if isinstance(images, str):
             self.images = load_data(images, 'data')
             train, valid = train_test_split(self.images, test_size=0.3, 
-                                            train_size=0.7, random_state=3407)
+                                            train_size=0.7, random_state=3407,
+                                            shuffle=False)
             if mode == 'train':
                 self.images = train
             elif mode == 'valid':
