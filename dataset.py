@@ -3,7 +3,6 @@ import pandas as pd
 import torch
 from pathlib import Path
 from PIL import Image
-import random
 from random import randint
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
