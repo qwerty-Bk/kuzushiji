@@ -79,7 +79,7 @@ if __name__ == '__main__':
             optimizer.step()
 
             logger.log({'x': model.losses["x"], 'y': model.losses["y"], 'w': model.losses["w"], 'h': model.losses["h"],
-                        'conf': model.losses["conf"], 'cls': model.losses["cls"], 'loss': model.losses["loss"],
+                        'conf': model.losses["conf"], 'cls': model.losses["cls"], 'loss': loss.item(),
                         'pr': model.losses["precision"], 'rec': model.losses["recall"]})
             print(
                 "[Epoch %d/%d, Batch %d/%d] [Losses: x %f, y %f, w %f, h %f, conf %f, cls %f, total %f, recall: %.5f, precision: %.5f]"
