@@ -42,7 +42,6 @@ def build_target(bboxes, labels):
     return targets
     
 
-
 def train_one_epoch(model, optimizer, scheduler, dataloader):
     running_losses = []
 
@@ -83,7 +82,9 @@ if __name__ == '__main__':
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=GAMMA)
 
     train(model, optimizer, scheduler, dataloader, N_EPOCH)
-
+    
+    os.makedirs("checkpoints", exist_ok=True)
+    os.makedirs("checkpoints/fast-crnn", exist_ok=True)
     torch.save(model, 'checkpoints/fast-crnn/temp_.pth')
 
 
