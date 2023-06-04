@@ -28,7 +28,7 @@ N_EPOCH = 100
 
 
 def create_model(pretrained):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained)
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=pretrained)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 2)
 
@@ -70,8 +70,9 @@ def train_one_epoch(model, optimizer, scheduler, dataloader):
     running_losses = []
     print(len(dataloader))
     for image, bboxes, labels in tqdm(iter(dataloader)):
-        images, targets = build_target(image, torch.Tensor(bboxes).to(DEVICE), torch.LongTensor(labels))
         try:
+            images, targets = build_target(image, torch.Tensor(bboxes).to(DEVICE), torch.LongTensor(labels))
+        
             predict_loss = model(images, targets)
 
             loss = sum(loss for loss in predict_loss.values())
@@ -117,7 +118,7 @@ if __name__ == '__main__':
 
     dataloader = DetectionDataset('train', max_size=2048, transforms=T.Compose([T.ColorJitter(0.3, 0.5, 0.5, 0.1)]))
 
-    model = create_model(False)
+    model = create_model(None)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=LR, momentum=MOMENTUM, weight_decay=WD)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=GAMMA)

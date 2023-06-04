@@ -3,7 +3,9 @@ import pandas as pd
 import torch
 from pathlib import Path
 from PIL import Image
+import random
 from random import randint
+from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from tqdm.notebook import tqdm
 
@@ -59,7 +61,8 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50):
     for i, bbox in enumerate(bboxes):
         if fill_i == max_labels:
             break
-        intersec = (min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0])) * (min(y1, bbox[1] + bbox[3]) - max(y0, bbox[1]))
+        intersec = max(0, min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0])) * \
+                   max(0, min(y1, bbox[1] + bbox[3]) - max(y0, bbox[1]))
         if intersec / bbox[2] / bbox[3] > thresh:
             new_bboxes[fill_i] = torch.Tensor([max(x0, bbox[0]) - x0, max(y0, bbox[1]) - y0,
                                                min(x1, bbox[0] + bbox[2]) - max(x0, bbox[0]),
@@ -76,11 +79,17 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50):
 
 
 class DetectionDataset(Dataset):
-    def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5):
+    def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5, mode='train'):
         if isinstance(crop_size, int):
             crop_size = (crop_size, crop_size)
         if isinstance(images, str):
             self.images = load_data(images, 'data')
+            train, valid = train_test_split(self.images, test_size=0.3, 
+                                            train_size=0.7, random_state=3407)
+            if mode == 'train':
+                self.images = train
+            elif mode == 'valid':
+                self.images = valid
         else:
             self.images = images
         self.max_size = max_size
@@ -100,7 +109,8 @@ class DetectionDataset(Dataset):
             bboxes = (bboxes.astype(float) * ratio).astype(int)
             image = image.resize((int(image.width * ratio), int(image.height * ratio)))
         # note that the boxes after this line might go over the borders (if we have to crop them, we have to change the new_boxxes.append line in ourCrop)
-        image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size, self.threshold)
+        image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size,
+                                        self.threshold)
         if self.transforms is not None:
             image = self.transforms(image)
         return image, bboxes, torch.LongTensor(labels)
