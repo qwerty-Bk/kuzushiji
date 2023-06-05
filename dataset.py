@@ -7,9 +7,7 @@ from random import randint
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from tqdm.notebook import tqdm
-np.random.seed(3407)
 
-import matplotlib.pyplot as plt
 
 np.random.seed(3407)
 
@@ -23,6 +21,7 @@ forgotten = [{'Unicode': 'U+770C', 'char': '県'},
 uni2sym_df = pd.concat([uni2sym_df, pd.DataFrame.from_records(forgotten)])
 uni2class = dict(zip(uni2sym_df.Unicode, uni2sym_df.index.tolist()))
 class2sym = dict(zip(uni2sym_df.index.tolist(), uni2sym_df.char))
+class2uni = dict(zip(uni2sym_df.index.tolist(), uni2sym_df.Unicode))
 
 
 def load_data(split, path):
