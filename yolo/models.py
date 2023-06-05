@@ -268,7 +268,7 @@ class Darknet(nn.Module):
         self.losses["precision"] /= 3
         return sum(output) if is_training else torch.cat(output, 1)
 
-    def load_weights(self, weights_path):
+    def load_weights(self, weights_path, device=torch.device('cuda:0')):
         """Parses and loads the weights stored in 'weights_path'"""
 
         # Open the weights file
@@ -287,9 +287,9 @@ class Darknet(nn.Module):
                 if module_def["batch_normalize"]:
                     # Load BN bias, weights, running mean and running variance
                     bn_layer = module[1]
-                    bn_layer.load_state_dict(torch.load(weights_path + f'/{i}_bn.pt'))
+                    bn_layer.load_state_dict(torch.load(weights_path + f'/{i}_bn.pt', map_location=device))
                 # Load conv
-                conv_layer.load_state_dict(torch.load(weights_path + f'/{i}_cv.pt'))
+                conv_layer.load_state_dict(torch.load(weights_path + f'/{i}_cv.pt', map_location=device))
 
     """
         @:param path    - path of the new weights file
