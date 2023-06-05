@@ -105,4 +105,4 @@ if __name__ == '__main__':
             model.seen += imgs.size(0)
 
         if epoch % opt.checkpoint_interval == 0:
-            model.save_weights("%s/%d.weights" % (opt.checkpoint_dir, epoch))
+            model.save_weights("%s/%d" % (opt.checkpoint_dir, epoch))
