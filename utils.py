@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 def draw_bboxes(image, bboxes, labels, order='xywh', mode='pixels', draw_class=True,
                 borderwidth=3):
-    if isinstance(image, np.ndarray) or isinstance(image, torch.Tensor):
+    if isinstance(image, np.ndarray):
         image = Image.fromarray(image)
     elif isinstance(image, torch.Tensor):
         image = np.moveaxis(image.numpy() * 255, 0, -1)
