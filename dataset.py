@@ -8,6 +8,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from tqdm.notebook import tqdm
 
+np.random.seed(3407)
+
 uni2sym_df = pd.read_csv('./data/unicode_translation.csv')
 forgotten = [{'Unicode': 'U+770C', 'char': '県'},
              {'Unicode': 'U+4FA1', 'char': '価'},
@@ -49,13 +51,17 @@ def load_data(split, path):
     return images
 
 
-def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50):
+def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50, to_fill=True):
     x0, y0 = randint(0, w - n_w), randint(0, h - n_h)
     x1, y1 = x0 + n_w, y0 + n_h
-    new_bboxes = torch.full((max_labels, 4), -1)
-    new_labels = torch.full((max_labels, 1), -1)
-    new_bboxes = torch.full((max_labels, 4), 0)
-    new_labels = torch.full((max_labels, 1), 0)
+
+    new_bboxes = bboxes
+    new_labels = labels
+    if to_fill:
+        new_bboxes = torch.full((max_labels, 4), -1)
+        new_labels = torch.full((max_labels, 1), -1)
+        new_bboxes = torch.full((max_labels, 4), 0)
+        new_labels = torch.full((max_labels, 1), 0)
     fill_i = 0
     for i, bbox in enumerate(bboxes):
         if fill_i == max_labels:
@@ -78,7 +84,7 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50):
 
 
 class DetectionDataset(Dataset):
-    def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5, mode='train'):
+    def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5, mode='train', max_labels=50, to_fill=True):
         if isinstance(crop_size, int):
             crop_size = (crop_size, crop_size)
         if isinstance(images, str):
@@ -96,6 +102,8 @@ class DetectionDataset(Dataset):
         self.crop_size = crop_size
         self.transforms = transforms
         self.threshold = threshold
+        self.max_labels = max_labels
+        self.to_fill = to_fill
 
     def __len__(self):
         return len(self.images)
@@ -110,7 +118,7 @@ class DetectionDataset(Dataset):
             image = image.resize((int(image.width * ratio), int(image.height * ratio)))
         # note that the boxes after this line might go over the borders (if we have to crop them, we have to change the new_boxxes.append line in ourCrop)
         image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size,
-                                        self.threshold)
+                                        self.threshold, max_labels=self.max_labels, to_fill=self.to_fill)
         if self.transforms is not None:
             image = self.transforms(image)
         return image, bboxes, torch.LongTensor(labels)
