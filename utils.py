@@ -5,7 +5,7 @@ from dataset import DetectionDataset, class2sym
 from PIL import Image, ImageDraw, ImageFont
 
 
-def draw_bboxes(image, bboxes, labels, order='xywh', mode='pixels'):
+def draw_bboxes(image, bboxes, labels, order='xywh', mode='pixels', draw_class=True):
     if isinstance(image, np.ndarray) or isinstance(image, torch.Tensor):
         image = Image.fromarray(image)
     if not isinstance(bboxes, torch.Tensor):
@@ -24,9 +24,10 @@ def draw_bboxes(image, bboxes, labels, order='xywh', mode='pixels'):
         else:
             raise ValueError('unknown mode in draw bboxes')
         draw.rectangle([a0, b0, a1, b1], outline=rgb, width=3)
-        draw.rectangle((x0, y0 - 14, x0 + 18, y0 + 4), fill=(255, 255, 255))
-        fnt = ImageFont.truetype("./Arial Unicode MS.TTF", 14)
-        draw.text((x0 + 2, y0 - 12), class2sym[class_i], fill=(0, 0, 0), font=fnt)
+        if draw_class:
+            draw.rectangle((x0, y0 - 14, x0 + 18, y0 + 4), fill=(255, 255, 255))
+            fnt = ImageFont.truetype("./Arial Unicode MS.TTF", 14)
+            draw.text((x0 + 2, y0 - 12), class2sym[class_i], fill=(0, 0, 0), font=fnt)
     return image
 
 
