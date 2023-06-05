@@ -9,6 +9,7 @@ from torch.utils.data import Dataset
 from tqdm.notebook import tqdm
 np.random.seed(3407)
 
+import matplotlib.pyplot as plt
 
 np.random.seed(3407)
 
@@ -60,8 +61,6 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50, t
     new_bboxes = bboxes
     new_labels = labels
     if to_fill:
-        new_bboxes = torch.full((max_labels, 4), -1)
-        new_labels = torch.full((max_labels, 1), -1)
         new_bboxes = torch.full((max_labels, 4), 0)
         new_labels = torch.full((max_labels, 1), 0)
     fill_i = 0
@@ -118,6 +117,7 @@ class DetectionDataset(Dataset):
             ratio = self.max_size / max(image.width, image.height)
             bboxes = (bboxes.astype(float) * ratio).astype(int)
             image = image.resize((int(image.width * ratio), int(image.height * ratio)))
+
         # note that the boxes after this line might go over the borders (if we have to crop them, we have to change the new_boxxes.append line in ourCrop)
         image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size,
                                         self.threshold, max_labels=self.max_labels, to_fill=self.to_fill)

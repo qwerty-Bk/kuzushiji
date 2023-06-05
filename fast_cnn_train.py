@@ -19,7 +19,6 @@ from PIL import Image, ImageFile
 from tqdm import tqdm
 
 from dataset import DetectionDataset, class2sym
-from utils import draw_bboxes
 
 DEVICE =  'cuda' if torch.cuda.is_available() else 'cpu'
 #DEVICE = 'cpu'
@@ -131,12 +130,10 @@ if __name__ == '__main__':
 
     print(DEVICE)
 
-    transform = T.Compose([T.ColorJitter(0.3, 0.5, 0.5, 0.1),
-                            T.ToTensor(),
-                            T.Normalize(0, 255)])
+    transform = T.Compose([T.ToTensor()])
 
     #dataloader = DetectionDataset('train', max_size=2048, crop_size=(512, 512), transforms=transform)
-    dataset = DetectionDataset('train', max_size=2048, crop_size=(512, 512), transforms=transform, max_labels=15)
+    dataset = DetectionDataset('train', max_size=1024, crop_size=(512, 512), transforms=transform, max_labels=15)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True, num_workers=2)
 
     model = create_model(None).to(DEVICE)

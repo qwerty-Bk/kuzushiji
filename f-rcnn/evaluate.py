@@ -14,11 +14,12 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_Res
 import torch.utils.data
 
 from PIL import Image, ImageFile
+import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 
 from dataset import DetectionDataset, class2sym
-from
+from utils import draw_bboxes
 
 DEVICE =  'cuda' if torch.cuda.is_available() else 'cpu'
 #DEVICE = 'cpu'
@@ -33,21 +34,22 @@ def create_model(pretrained):
 
     return model
 
-def prepare_prediction(prediction, batch_images):
-    for i in len(predicion):
-        boxes = predicion[i]['bboxes']
-        labels = predicion[i]['labels']
-        scores = predicion[i]['scores']
+def prepare_prediction(batch_image, prediction):
+    #print(prediction)
+    for i in range(len(prediction)):
+        #print(prediction[i])
+        boxes = prediction[i]['boxes']
+        labels = prediction[i]['labels']
+        scores = prediction[i]['scores']
 
-        images = batch_images[i]
+        boxes[:,2] = (boxes[:,2] - boxes[:,0]) 
+        boxes[:,3] = (boxes[:,3] - boxes[:,1]) 
 
-        boxes[:,0] = (boxes[:,0] + boxes[:,2]) / 2
-        boxes[:,1] = (boxes[:,1] + boxes[:,3]) / 2
-        boxes[:,2] = boxes[:,2] - boxes[:,0]
-        boxes[:,3] = boxes[:,3] - boxes[:,1]
-
-
-        
+        image_marked = draw_bboxes(batch_image, boxes, labels)
+        print(image_marked.size)
+          
+        plt.imshow(image_marked)
+        plt.show()
 
 def build_target(image, bboxes, labels):
     images = image.to(DEVICE)
@@ -80,29 +82,22 @@ def build_target(image, bboxes, labels):
     return images, targets
 
 
-
 def evaluate(model, dataloader):
-    
-    
-    running_losses = []
+    #running_losses = []
     print(len(dataloader))
     #for image, bboxes, labels in tqdm(iter(dataloader)):
     pcs = tqdm(enumerate(dataloader))
     for batch_idx, (image, bboxes, labels) in pcs:
+        image_t = image[0].clone() * 255
+        image_t = np.moveaxis(image_t.numpy()*255, 0, -1)
+        # print(image_t)
+        image_t = Image.fromarray(image_t.astype(np.uint8))
         
         images, targets = build_target(image, torch.Tensor(bboxes).to(DEVICE), torch.LongTensor(labels))
         
         predict_loss = model(images)
-        print(predict_loss)
-        loss = sum(loss for loss in predict_loss.values())
-        #print(loss)
 
-        pcs.set_description(f"Loss {loss}")
-
-        running_losses.append(loss.item())
-
-        if (batch_idx % 40) == 0:
-            print(loss)
+        prepare_prediction(image_t, predict_loss)
 
     return running_losses
 
@@ -112,13 +107,13 @@ if __name__ == '__main__':
     print(DEVICE)
 
     transform = T.Compose([T.ColorJitter(0.3, 0.5, 0.5, 0.1),
-                            T.ToTensor(),
-                            T.Normalize(0, 255)])
+                          T.ToTensor(),
+                          T.Normalize(0, 255)])
 
     #dataloader = DetectionDataset('train', max_size=2048, crop_size=(512, 512), transforms=transform)
     dataset = DetectionDataset('train', max_size=2048, crop_size=(512, 512), 
                                transforms=transform, max_labels=15, mode='valid')
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True, num_workers=2)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
 
     model = create_model(None).to(DEVICE)
     model.eval()
