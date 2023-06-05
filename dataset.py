@@ -9,6 +9,9 @@ from torch.utils.data import Dataset
 from tqdm.notebook import tqdm
 np.random.seed(3407)
 
+
+np.random.seed(3407)
+
 uni2sym_df = pd.read_csv('./data/unicode_translation.csv')
 forgotten = [{'Unicode': 'U+770C', 'char': '県'},
              {'Unicode': 'U+4FA1', 'char': '価'},

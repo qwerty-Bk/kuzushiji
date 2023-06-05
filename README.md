@@ -2,7 +2,14 @@
 Tsinghua, 2023 Spring, Deep Learning, Final project
 
 
-How to use in Colab:
+### How to use in Colab
+
+Install library for logging:
+``` 
+!pip install wandb --quiet
+```
+
+Download dataset:
 ```
 !mkdir ~/.kaggle
 !touch ~/.kaggle/kaggle.json
@@ -26,9 +33,9 @@ Download & unzip data:
 ``` 
 %cd kuzushiji
 !kaggle competitions download -c kuzushiji-recognition
-!unzip kuzushiji-recognition.zip
 !mkdir data
 %cd data
+!unzip /content/kuzushiji/kuzushiji-recognition.zip
 !mkdir train
 %cd train
 !unzip /content/kuzushiji/train_images.zip
@@ -44,5 +51,5 @@ Font for Japanese:
 ```
 %cd ..
 !gdown --id 1prRT49D1yJFGo75oxpbYgPOfXnecKMtM
-%cd content/kuzushiji
+%cd /content/kuzushiji
 ```
