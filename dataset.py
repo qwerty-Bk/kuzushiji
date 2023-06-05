@@ -55,6 +55,9 @@ def load_data(split, path):
 
 
 def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50, to_fill=True):
+    if w == n_w or h == n_h:
+        return image, bboxes, labels
+
     x0, y0 = randint(0, w - n_w), randint(0, h - n_h)
     x1, y1 = x0 + n_w, y0 + n_h
 
@@ -85,7 +88,8 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50, t
 
 
 class DetectionDataset(Dataset):
-    def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5, mode='train', max_labels=50, to_fill=True):
+    def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5, mode='train',
+                 max_labels=300, to_fill=True):
         if isinstance(crop_size, int):
             crop_size = (crop_size, crop_size)
         if isinstance(images, str):

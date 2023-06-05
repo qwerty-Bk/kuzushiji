@@ -106,10 +106,9 @@ class YOLOLayer(nn.Module):
         self.image_dim = img_dim
         self.ignore_thres = 0.5
         self.lambda_coord = 1
-        # print(f'created yolo with {num_classes} classes')
 
-        self.mse_loss = nn.MSELoss(size_average=True)  # Coordinate loss
-        self.bce_loss = nn.BCELoss(size_average=True)  # Confidence loss
+        self.mse_loss = nn.MSELoss(reduction='mean')  # Coordinate loss
+        self.bce_loss = nn.BCELoss(reduction='mean')  # Confidence loss
         self.ce_loss = nn.CrossEntropyLoss()  # Class loss
 
     def forward(self, x, targets=None):
@@ -119,9 +118,9 @@ class YOLOLayer(nn.Module):
         stride = self.image_dim / nG
 
         # Tensors for cuda support
-        FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-        LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
-        ByteTensor = torch.cuda.ByteTensor if x.is_cuda else torch.ByteTensor
+        # FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
+        # LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
+        # ByteTensor = torch.cuda.ByteTensor if x.is_cuda else torch.ByteTensor
 
         prediction = x.view(nB, nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
@@ -134,14 +133,14 @@ class YOLOLayer(nn.Module):
         pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
         # Calculate offsets for each grid
-        grid_x = torch.arange(nG).repeat(nG, 1).view([1, 1, nG, nG]).type(FloatTensor)
-        grid_y = torch.arange(nG).repeat(nG, 1).t().view([1, 1, nG, nG]).type(FloatTensor)
-        scaled_anchors = FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in self.anchors])
+        grid_x = torch.arange(nG).repeat(nG, 1).view([1, 1, nG, nG]).type(torch.FloatTensor).to(x.device)
+        grid_y = torch.arange(nG).repeat(nG, 1).t().view([1, 1, nG, nG]).type(torch.FloatTensor).to(y.device)
+        scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in self.anchors]).to(x.device)
         anchor_w = scaled_anchors[:, 0:1].view((1, nA, 1, 1))
         anchor_h = scaled_anchors[:, 1:2].view((1, nA, 1, 1))
 
         # Add offset and scale with anchors
-        pred_boxes = FloatTensor(prediction[..., :4].shape)
+        pred_boxes = torch.FloatTensor(prediction[..., :4].shape).to(x.device)
         pred_boxes[..., 0] = x.data + grid_x
         pred_boxes[..., 1] = y.data + grid_y
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
@@ -173,16 +172,16 @@ class YOLOLayer(nn.Module):
             precision = float(nCorrect / nProposals)
 
             # Handle masks
-            mask = Variable(mask.type(ByteTensor))
-            conf_mask = Variable(conf_mask.type(ByteTensor))
+            mask = Variable(mask.type(torch.ByteTensor).to(x.device))
+            conf_mask = Variable(conf_mask.type(torch.ByteTensor).to(x.device))
 
             # Handle target variables
-            tx = Variable(tx.type(FloatTensor), requires_grad=False)
-            ty = Variable(ty.type(FloatTensor), requires_grad=False)
-            tw = Variable(tw.type(FloatTensor), requires_grad=False)
-            th = Variable(th.type(FloatTensor), requires_grad=False)
-            tconf = Variable(tconf.type(FloatTensor), requires_grad=False)
-            tcls = Variable(tcls.type(LongTensor), requires_grad=False)
+            tx = Variable(tx.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            ty = Variable(ty.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            tw = Variable(tw.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            th = Variable(th.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            tconf = Variable(tconf.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            tcls = Variable(tcls.type(torch.LongTensor).to(x.device), requires_grad=False)
 
             # Get conf mask where gt and where there is no gt
             conf_mask_true = mask.type(torch.bool)
@@ -244,19 +243,6 @@ class Darknet(nn.Module):
         layer_outputs = []
         for i, (module_def, module) in enumerate(zip(self.module_defs, self.module_list)):
             if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-                # try:
-                #     x = module(x)
-                # except RuntimeError as e:
-                #     print('layer_outputs shapes', end=' ')
-                #     for ii in range(len(layer_outputs)):
-                #         x = layer_outputs[ii]
-                #         if len(x.shape) != 0:
-                #             print(x.shape[1], end=', ')
-                #         else:
-                #             print(0, end=', ')
-                #     print()
-                #     print(i, module)
-                #     1/0
                 x = module(x)
             elif module_def["type"] == "route":
                 layer_i = [int(x) for x in module_def["layers"].split(",")]
@@ -289,6 +275,7 @@ class Darknet(nn.Module):
 
         # Needed to write header when saving weights
         self.header_info = header
+        print('self.header_info', self.header_info)
 
         self.seen = header[3]
         weights = np.fromfile(fp, dtype=np.float32)  # The rest are weights
