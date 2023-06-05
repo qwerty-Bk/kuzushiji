@@ -106,10 +106,9 @@ class YOLOLayer(nn.Module):
         self.image_dim = img_dim
         self.ignore_thres = 0.5
         self.lambda_coord = 1
-        # print(f'created yolo with {num_classes} classes')
 
-        self.mse_loss = nn.MSELoss(size_average=True)  # Coordinate loss
-        self.bce_loss = nn.BCELoss(size_average=True)  # Confidence loss
+        self.mse_loss = nn.MSELoss(reduction='mean')  # Coordinate loss
+        self.bce_loss = nn.BCELoss(reduction='mean')  # Confidence loss
         self.ce_loss = nn.CrossEntropyLoss()  # Class loss
 
     def forward(self, x, targets=None):
@@ -244,19 +243,6 @@ class Darknet(nn.Module):
         layer_outputs = []
         for i, (module_def, module) in enumerate(zip(self.module_defs, self.module_list)):
             if module_def["type"] in ["convolutional", "upsample", "maxpool"]:
-                # try:
-                #     x = module(x)
-                # except RuntimeError as e:
-                #     print('layer_outputs shapes', end=' ')
-                #     for ii in range(len(layer_outputs)):
-                #         x = layer_outputs[ii]
-                #         if len(x.shape) != 0:
-                #             print(x.shape[1], end=', ')
-                #         else:
-                #             print(0, end=', ')
-                #     print()
-                #     print(i, module)
-                #     1/0
                 x = module(x)
             elif module_def["type"] == "route":
                 layer_i = [int(x) for x in module_def["layers"].split(",")]
@@ -289,6 +275,7 @@ class Darknet(nn.Module):
 
         # Needed to write header when saving weights
         self.header_info = header
+        print('self.header_info', self.header_info)
 
         self.seen = header[3]
         weights = np.fromfile(fp, dtype=np.float32)  # The rest are weights

@@ -17,12 +17,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--epochs", type=int, default=10, help="number of epochs")
 parser.add_argument("--batch-size", type=int, default=16, help="size of each image batch")
 parser.add_argument("--model-config-path", type=str, default="yolo/yolo-tiny.cfg", help="path to model config file")
-# parser.add_argument("--weights-path", type=str, default="weights/yolov3.weights", help="path to weights file")
+parser.add_argument("--weights-path", type=str, default="", help="path to weights file")
 parser.add_argument("--conf-thres", type=float, default=0.8, help="object confidence threshold")
 parser.add_argument("--nms-thres", type=float, default=0.4, help="iou threshold for non-maximum suppression")
 parser.add_argument("--img-size", type=int, default=416, help="size of each image dimension")
 parser.add_argument("--checkpoint-interval", type=int, default=1, help="interval between saving model weights")
-parser.add_argument("--max-label", type=int, default=50, help="interval between saving model weights")
+parser.add_argument("--max-label", type=int, default=300, help="interval between saving model weights")
 parser.add_argument(
     "--checkpoint-dir", type=str, default="yolo/checkpoints", help="directory where model checkpoints are saved"
 )
@@ -43,6 +43,8 @@ if __name__ == '__main__':
 
     model = Darknet(opt.model_config_path)
     model.apply(weights_init_normal)
+    if len(opt.weights_path) > 1:
+        model.load_weights(opt.weights_path)
 
     model = model.to(device)
     model.train()

@@ -89,7 +89,8 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50, t
 
 
 class DetectionDataset(Dataset):
-    def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5, mode='train', max_labels=50, to_fill=True):
+    def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5, mode='train',
+                 max_labels=300, to_fill=True):
         if isinstance(crop_size, int):
             crop_size = (crop_size, crop_size)
         if isinstance(images, str):
