@@ -23,6 +23,7 @@ forgotten = [{'Unicode': 'U+770C', 'char': '県'},
 uni2sym_df = pd.concat([uni2sym_df, pd.DataFrame.from_records(forgotten)])
 uni2class = dict(zip(uni2sym_df.Unicode, uni2sym_df.index.tolist()))
 class2sym = dict(zip(uni2sym_df.index.tolist(), uni2sym_df.char))
+class2uni = dict(zip(uni2sym_df.index.tolist(), uni2sym_df.Unicode))
 
 
 def load_data(split, path):
@@ -31,8 +32,10 @@ def load_data(split, path):
     df = pd.read_csv(f'{path}/{csv_split}.csv', keep_default_na=False)
     image_path = Path(f'{path}/{split}')
     images = []
+    image_ids = []
     for id, row in tqdm(df.iterrows(), total=len(df)):
         id_name = row['image_id'] + '.jpg'
+        image_ids.append(row['image_id'])
         image = {
             'file': Path.joinpath(image_path, id_name),
             'bboxes': [],
@@ -51,7 +54,7 @@ def load_data(split, path):
         image['bboxes'] = np.array(image['bboxes'])
         image['labels'] = np.array(image['labels'])
         images.append(image)
-    return images
+    return images, image_ids
 
 
 def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50, to_fill=True):
@@ -89,13 +92,14 @@ def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50, t
 
 class DetectionDataset(Dataset):
     def __init__(self, images, max_size=None, crop_size=(1024, 1024), transforms=None, threshold=0.5, mode='train',
-                 max_labels=300, to_fill=True):
+                 max_labels=300, to_fill=True, apply_crop=True, return_ids=False):
+        self.image_ids = None
         if isinstance(crop_size, int):
             crop_size = (crop_size, crop_size)
         if isinstance(images, str):
-            self.images = load_data(images, 'data')
-            train, valid = train_test_split(self.images, test_size=0.3, 
-                                            train_size=0.7, random_state=3407,
+            self.images, self.image_ids = load_data(images, 'data')
+            train, valid = train_test_split(self.images, test_size=0.2, 
+                                            train_size=0.8, random_state=3407,
                                             shuffle=False)
             if mode == 'train':
                 self.images = train
@@ -109,6 +113,8 @@ class DetectionDataset(Dataset):
         self.threshold = threshold
         self.max_labels = max_labels
         self.to_fill = to_fill
+        self.apply_crop = apply_crop
+        self.return_ids = return_ids
 
     def __len__(self):
         return len(self.images)
@@ -123,8 +129,12 @@ class DetectionDataset(Dataset):
             image = image.resize((int(image.width * ratio), int(image.height * ratio)))
 
         # note that the boxes after this line might go over the borders (if we have to crop them, we have to change the new_boxxes.append line in ourCrop)
-        image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size,
-                                        self.threshold, max_labels=self.max_labels, to_fill=self.to_fill)
+        if self.apply_crop:
+            image, bboxes, labels = ourCrop(image, bboxes, labels, image.width, image.height, *self.crop_size,
+                                            self.threshold, max_labels=self.max_labels, to_fill=self.to_fill)
         if self.transforms is not None:
             image = self.transforms(image)
+        if self.return_ids:
+            return image, self.image_ids[idx], bboxes, torch.LongTensor(labels)
+
         return image, bboxes, torch.LongTensor(labels)
