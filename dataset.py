@@ -53,6 +53,30 @@ def load_data(split, path):
     return images
 
 
+def load_characters(path):
+    df = pd.read_csv(f'{path}/train.csv', keep_default_na=False)
+    image_path = Path(f'{path}/train')
+    images = []
+    for _, row in tqdm(df.iterrows(), total=len(df)):
+        id_name = row['image_id'] + '.jpg'
+        labels = row['labels'].split()
+        big_image = Image.open(image_path / id_name)
+        assert len(labels) % 5 == 0
+        n = len(labels) // 5
+        images_now = []
+        for i in range(0, n):
+            image = {}
+            uni, x, y, w, h = labels[i * 5:(i + 1) * 5]
+            image['image'] = big_image.crop((int(x), int(y), int(x) + int(w), int(y) + int(h)))
+            image['id'] = id_name
+            image['x'] = x
+            image['y'] = y
+            image['label'] = uni2class[uni]
+            images_now.append(image)
+        images.append(images_now)
+    return images
+
+
 def ourCrop(image, bboxes, labels, w, h, n_w, n_h, thresh=0.33, max_labels=50, to_fill=True):
     if w == n_w or h == n_h:
         return image, bboxes, labels
@@ -127,3 +151,55 @@ class DetectionDataset(Dataset):
         if self.transforms is not None:
             image = self.transforms(image)
         return image, bboxes, torch.LongTensor(labels)
+
+
+def add_margin(pil_img, top, right, bottom, left, color):
+    width, height = pil_img.size
+    new_width = width + right + left
+    new_height = height + top + bottom
+    result = Image.new(pil_img.mode, (new_width, new_height), color)
+    result.paste(pil_img, (left, top))
+    return result
+
+
+class ClassificationDataset(Dataset):
+    def __init__(self, size, images=None, transforms=None, mode='train'):
+        if images is None:
+            self.images = load_characters('data')
+            train, valid = train_test_split(self.images, test_size=0.3,
+                                            train_size=0.7, random_state=3407,
+                                            shuffle=False)
+            if mode == 'train':
+                self.images = [im for sublist in train for im in sublist]
+            elif mode == 'valid':
+                self.images = [im for sublist in valid for im in sublist]
+        else:
+            self.images = images
+        self.size = size
+        self.transforms = transforms
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        image = self.images[idx]['image']
+        cls = self.images[idx]['label']
+        w, h = image.width, image.height
+        gray = (128, 128, 128)
+        if w > h:
+            new_image = add_margin(image, (w - h) // 2, 0, w - h - (w - h) // 2, 0, gray)
+        elif h > w:
+            new_image = add_margin(image, 0, (h - w) // 2, 0, h - w - (h - w) // 2, gray)
+        else:
+            new_image = image
+        new_image = new_image.resize((self.size, self.size))
+
+        if self.transforms is not None:
+            new_image = self.transforms(new_image)
+        return new_image, cls
+
+
+if __name__ == '__main__':
+    ds = ClassificationDataset(128)
+    print(len(ds))
+    ds[0][0].show()
