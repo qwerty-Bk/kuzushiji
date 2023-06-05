@@ -53,8 +53,7 @@ if __name__ == '__main__':
 
     transforms = T.Compose([
         T.ColorJitter(0.3, 0.5, 0.5, 0.1),
-        T.ToTensor(),
-        T.Normalize(0, 255)
+        T.ToTensor()
     ])
     train_set = DetectionDataset('train', 1024, opt.img_size, transforms)
     dataloader = torch.utils.data.DataLoader(train_set, batch_size=opt.batch_size, shuffle=True, num_workers=2)
