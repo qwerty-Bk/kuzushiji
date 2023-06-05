@@ -27,9 +27,10 @@ parser.add_argument(
     "--checkpoint-dir", type=str, default="yolo/checkpoints", help="directory where model checkpoints are saved"
 )
 parser.add_argument("--use-cuda", type=bool, default=True, help="whether to use cuda if available")
+parser.add_argument("--cuda-id", type=int, default=0, help="which cuda to use")
 opt = parser.parse_args()
 
-device = 'cuda:0' if torch.cuda.is_available() and opt.use_cuda else 'cpu'
+device = f'cuda:{opt.cuda_id}' if torch.cuda.is_available() and opt.use_cuda else 'cpu'
 
 if __name__ == '__main__':
     os.makedirs("yolo/output", exist_ok=True)

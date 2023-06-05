@@ -118,9 +118,9 @@ class YOLOLayer(nn.Module):
         stride = self.image_dim / nG
 
         # Tensors for cuda support
-        FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-        LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
-        ByteTensor = torch.cuda.ByteTensor if x.is_cuda else torch.ByteTensor
+        # FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
+        # LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
+        # ByteTensor = torch.cuda.ByteTensor if x.is_cuda else torch.ByteTensor
 
         prediction = x.view(nB, nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
@@ -133,14 +133,14 @@ class YOLOLayer(nn.Module):
         pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
         # Calculate offsets for each grid
-        grid_x = torch.arange(nG).repeat(nG, 1).view([1, 1, nG, nG]).type(FloatTensor)
-        grid_y = torch.arange(nG).repeat(nG, 1).t().view([1, 1, nG, nG]).type(FloatTensor)
-        scaled_anchors = FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in self.anchors])
+        grid_x = torch.arange(nG).repeat(nG, 1).view([1, 1, nG, nG]).type(torch.FloatTensor).to(x.device)
+        grid_y = torch.arange(nG).repeat(nG, 1).t().view([1, 1, nG, nG]).type(torch.FloatTensor).to(y.device)
+        scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in self.anchors]).to(x.device)
         anchor_w = scaled_anchors[:, 0:1].view((1, nA, 1, 1))
         anchor_h = scaled_anchors[:, 1:2].view((1, nA, 1, 1))
 
         # Add offset and scale with anchors
-        pred_boxes = FloatTensor(prediction[..., :4].shape)
+        pred_boxes = torch.FloatTensor(prediction[..., :4].shape).to(x.device)
         pred_boxes[..., 0] = x.data + grid_x
         pred_boxes[..., 1] = y.data + grid_y
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
@@ -172,16 +172,16 @@ class YOLOLayer(nn.Module):
             precision = float(nCorrect / nProposals)
 
             # Handle masks
-            mask = Variable(mask.type(ByteTensor))
-            conf_mask = Variable(conf_mask.type(ByteTensor))
+            mask = Variable(mask.type(torch.ByteTensor).to(x.device))
+            conf_mask = Variable(conf_mask.type(torch.ByteTensor).to(x.device))
 
             # Handle target variables
-            tx = Variable(tx.type(FloatTensor), requires_grad=False)
-            ty = Variable(ty.type(FloatTensor), requires_grad=False)
-            tw = Variable(tw.type(FloatTensor), requires_grad=False)
-            th = Variable(th.type(FloatTensor), requires_grad=False)
-            tconf = Variable(tconf.type(FloatTensor), requires_grad=False)
-            tcls = Variable(tcls.type(LongTensor), requires_grad=False)
+            tx = Variable(tx.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            ty = Variable(ty.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            tw = Variable(tw.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            th = Variable(th.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            tconf = Variable(tconf.type(torch.FloatTensor).to(x.device), requires_grad=False)
+            tcls = Variable(tcls.type(torch.LongTensor).to(x.device), requires_grad=False)
 
             # Get conf mask where gt and where there is no gt
             conf_mask_true = mask.type(torch.bool)
