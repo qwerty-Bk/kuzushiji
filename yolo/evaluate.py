@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
         outputs = non_max_suppression(all_outputs, 4781, conf_thres=opt.conf_thres, nms_thres=opt.nms_thres)
         labels = ''
-        output_sorted_ind = outputs[0][:, 4].sort()[1]
+        output_sorted_ind = outputs[0][:, 4].sort(reversed=True)[1]
         for idx, pred in enumerate(outputs[0][output_sorted_ind]):
             if idx >= 1200:
                 break
