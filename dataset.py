@@ -7,6 +7,9 @@ from random import randint
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from tqdm.notebook import tqdm
+from os.path import normpath, basename
+import os
+import glob
 
 
 np.random.seed(3407)
@@ -54,25 +57,30 @@ def load_data(split, path):
 
 
 def load_characters(path):
+    if os.path.exists(f'{path}/class'):
+        images = []
+        for dir in os.listdir(f'{path}/class'):
+            crops = glob.glob(f'{path}/class/{dir}/*.jpg')
+            images.append(crops)
+        return images
+    os.makedirs(f'{path}/class', exist_ok=True)
     df = pd.read_csv(f'{path}/train.csv', keep_default_na=False)
-    image_path = Path(f'{path}/train')
+    image_path = Path(f'{path}/class')
     images = []
     for _, row in tqdm(df.iterrows(), total=len(df)):
         id_name = row['image_id'] + '.jpg'
         labels = row['labels'].split()
-        big_image = Image.open(image_path / id_name)
+        big_image = Image.open(Path(f'{path}/train') / id_name)
         assert len(labels) % 5 == 0
         n = len(labels) // 5
         images_now = []
+        os.makedirs(image_path / row['image_id'], exist_ok=True)
         for i in range(0, n):
-            image = {}
             uni, x, y, w, h = labels[i * 5:(i + 1) * 5]
-            image['image'] = big_image.crop((int(x), int(y), int(x) + int(w), int(y) + int(h)))
-            image['id'] = id_name
-            image['x'] = x
-            image['y'] = y
-            image['label'] = uni2class[uni]
-            images_now.append(image)
+            image = big_image.crop((int(x), int(y), int(x) + int(w), int(y) + int(h)))
+            whatever = str(i) + '_' + str(uni2class[uni]) + '.jpg'
+            image.save(image_path / row['image_id'] / whatever)
+            images_now.append(image_path / row['image_id'] / whatever)
         images.append(images_now)
     return images
 
@@ -182,8 +190,8 @@ class ClassificationDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        image = self.images[idx]['image']
-        cls = self.images[idx]['label']
+        image = Image.open(self.images[idx])
+        cls = int(basename(normpath(self.images[idx])).split('_')[-1][:-4])
         w, h = image.width, image.height
         gray = (128, 128, 128)
         if w > h:
