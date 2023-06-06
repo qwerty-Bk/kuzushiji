@@ -43,7 +43,7 @@ if __name__ == '__main__':
     valid_ds = ClassificationDataset(opt.img_size, mode='valid', transforms=valid_transforms)
     valid_loader = DataLoader(valid_ds, batch_size=opt.batch_size, shuffle=False)
 
-    model = models.resnet18(num_classes=4781)
+    model = models.resnext101_32x8d(num_classes=4781).to(device)
     model.train()
     optimizer = torch.optim.SGD(model.parameters(), lr=opt.learning_rate)
 
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         if (epoch + 1) % opt.checkpoint_interval == 0:
             torch.save(model.state_dict(), opt.checkpoint_dir + f'/{epoch}.pth')
             model.eval()
-            with torch.no_grad:
+            with torch.no_grad():
                 valid_loss = 0
                 valid_correct = 0
                 for i, data in tqdm(enumerate(valid_loader), total=len(valid_loader)):
@@ -95,5 +95,5 @@ if __name__ == '__main__':
                     _, preds = torch.max(outputs.data, 1)
                     valid_correct += (preds == labels).sum().item()
 
-            logger.log({'valid loss': valid_loss / len(valid_loader), 'train acc': valid_correct / len(valid_loader)})
+            logger.log({'valid loss': valid_loss / len(valid_loader), 'valid acc': valid_correct / len(valid_ds)})
             model.train()
