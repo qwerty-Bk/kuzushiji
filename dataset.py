@@ -128,13 +128,15 @@ class DetectionDataset(Dataset):
             crop_size = (crop_size, crop_size)
         if isinstance(images, str):
             self.images, self.image_ids = load_data(images, 'data')
-            train, valid = train_test_split(self.images, test_size=0.2,
+            train, valid, train_ids, valid_ids = train_test_split(self.images, self.image_ids, test_size=0.2,
                                             train_size=0.8, random_state=3407,
                                             shuffle=False)
             if mode == 'train':
                 self.images = train
+                self.image_ids = train_ids
             elif mode == 'valid':
                 self.images = valid
+                self.image_ids = valid_ids
         else:
             self.images = images
         self.max_size = max_size
