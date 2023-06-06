@@ -65,13 +65,13 @@ if __name__ == '__main__':
         for batch_i, (image, bboxes, labels) in enumerate(dataloader):
             imgs = image.to(device)
             yolo_bboxes = bboxes.to(device)
-            yolo_bboxes[..., 2:] = yolo_bboxes[..., 2:] / 2
-            yolo_bboxes[..., 0] += yolo_bboxes[..., 2]
-            yolo_bboxes[..., 1] += yolo_bboxes[..., 3]
+            # yolo_bboxes[..., 2:] = yolo_bboxes[..., 2:] / 2
+            yolo_bboxes[..., 0] = yolo_bboxes[..., 0] + yolo_bboxes[..., 2] / 2
+            yolo_bboxes[..., 1] = yolo_bboxes[..., 1] + yolo_bboxes[..., 3] / 2
             yolo_bboxes = yolo_bboxes / opt.img_size
 
             labels = labels.to(device)
-            targets = torch.concat([labels, yolo_bboxes], -1)
+            targets = torch.cat([labels, yolo_bboxes], -1)
 
             optimizer.zero_grad()
 
