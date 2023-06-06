@@ -11,6 +11,7 @@ from dataset import class2uni
 import pandas as pd
 from PIL import Image, ImageDraw
 import numpy as np
+from os.path import normpath, basename
 
 num_classes = 4781
 
@@ -100,7 +101,8 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         for i, sample in enumerate(tqdm(valid_set)):
-            image, file_name, bboxes, _ = sample
+            image, _, bboxes, _ = sample
+            file_name = basename(normpath(valid_set.images[i]['file']))[:-4]
             labels = ""
             if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
                 picture = Image.fromarray(np.moveaxis(image.to("cpu").numpy() * 255, 0, -1).astype(np.uint8))
@@ -120,7 +122,9 @@ if __name__ == '__main__':
                 for prediction in predictions:
                     x0, y0, x1, y1 = prediction
                     xc, yc = (x0 + x1) / 2, (y0 + y1) / 2
-                    xc, yc = xc.item(), yc.item()
+                    orig_img = Image.open(f'data/train/{file_name}.jpg')
+                    k = 1 if opt.max_size is None else max(orig_img.width, orig_img.height) / opt.max_size
+                    xc, yc = xc.item() * k, yc.item() * k
                     x0, y0, x1, y1 = [int(x.item()) for x in [x0, y0, x1, y1]]
                     if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
                         draw.rectangle((x0, y0, x1, y1), outline=(240, 0, 200), width=1)
