@@ -8,8 +8,8 @@ import pandas as pd
 
 def define_console_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sub_path', default='submission.csv', type=str)
-    parser.add_argument('--solution_path', default='ground_truth.csv', type=str)
+    parser.add_argument('--sub_path', default='answer.csv', type=str)   # submission
+    parser.add_argument('--solution_path', default='', type=str)        # ground truth
     return parser
 
 
@@ -117,14 +117,23 @@ if __name__ == '__main__':
     shell_args = parser.parse_args()
     sub = pd.read_csv(shell_args.sub_path)
     path, split = 'data', 'train'
-    if not os.path.exists(shell_args.solution_path):
+    if len(shell_args.solution_path) == 0:
         df = pd.read_csv(f'{path}/{split}.csv', keep_default_na=False)
-        sol_df = pd.DataFrame()
+        solution = pd.DataFrame()
         for id, row in sub.iterrows():
             img_id = row['image_id']
             needed_row = df.loc[df['image_id'] == img_id]
-            sol_df = pd.concat([sol_df, needed_row])
-        sol_df.to_csv(shell_args.solution_path)
-    solution = pd.read_csv(shell_args.solution_path)
+            rest = needed_row['labels'].tolist()[0]
+            rest = rest.split()
+            labels = ""
+            for n in range(len(rest) // 5):
+                labels += rest[n * 5] + " " + rest[n * 5 + 1] + " " + rest[n * 5 + 2] + " "
+                labels += str(int(rest[n * 5 + 1]) + int(rest[n * 5 + 3])) + " "
+                labels += str(int(rest[n * 5 + 2]) + int(rest[n * 5 + 4])) + " "
+            solution = pd.concat([solution, pd.DataFrame({'image_id': [img_id], 'labels': [labels[:-1]]})])
+    else:
+        solution = pd.read_csv(shell_args.solution_path)
     score = kuzushiji_f1(sub, solution)
+    print('sub', sub)
+    print('solution', solution)
     print('F1 score of: {0}'.format(score))

@@ -128,7 +128,7 @@ if __name__ == '__main__':
                     x0, y0, x1, y1 = [int(x.item()) for x in [x0, y0, x1, y1]]
                     if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
                         draw.rectangle((x0, y0, x1, y1), outline=(240, 0, 200), width=1)
-                    crop = image[:, x0:x1, y0:y1]
+                    crop = image[:, y0:y1, x0:x1]
                     padded_size = max(crop.shape[1:])
                     padded_add = padded_size - min(crop.shape[1:])
                     if crop.shape[1] > crop.shape[2]:
@@ -148,4 +148,4 @@ if __name__ == '__main__':
             needed_row = pd.DataFrame({'image_id': [file_name], 'labels': [labels[:-1]], 'Useage': ['Public']})
             pred_df = pd.concat([pred_df, needed_row])
 
-    pred_df.to_csv(opt.csv_path)
+    pred_df.to_csv(opt.csv_path, index=False)
