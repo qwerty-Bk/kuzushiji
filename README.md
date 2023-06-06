@@ -53,3 +53,9 @@ Font for Japanese:
 !gdown --id 1prRT49D1yJFGo75oxpbYgPOfXnecKMtM
 %cd /content/kuzushiji
 ```
+Requirements
+```
+mmcv 1.7.0
+mmengine
+mmdetection
+```
