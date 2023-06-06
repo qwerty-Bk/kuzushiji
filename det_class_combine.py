@@ -45,9 +45,9 @@ parser.add_argument("--det-model", type=str, help="detector: " + ' '.join(detect
 parser.add_argument("--class-weights", type=str, help="path to class weights")
 parser.add_argument("--det-weights", type=str, help="path to detector weights")
 parser.add_argument("--conf-thres", type=float, default=0.9, help="object confidence threshold")
-parser.add_argument("--nms-thres", type=float, default=0.3, help="iou threshold for non-maximum suppression")
+parser.add_argument("--nms-thres", type=float, default=0.2, help="iou threshold for non-maximum suppression")
 parser.add_argument("--max-size", type=int, default=1024, help="hyperpar of dataset")
-parser.add_argument("--draw-every", type=int, default=1, help="which image to show, set to 10^7 if you don't need it")
+parser.add_argument("--draw-every", type=int, default=0, help="which image to show, 0 shows nothing")
 parser.add_argument("--csv-path", type=str, default="answer.csv", help="file for submission")
 parser.add_argument("--use-cuda", type=bool, default=True, help="whether to use cuda if available")
 parser.add_argument("--cuda-id", type=int, default=0, help="which cuda to use")
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         for i, sample in enumerate(tqdm(valid_set)):
             image, file_name, bboxes, _ = sample
             labels = ""
-            if (i + 1) % opt.draw_every == 0:
+            if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
                 picture = Image.fromarray(np.moveaxis(image.to("cpu").numpy() * 255, 0, -1).astype(np.uint8))
                 draw = ImageDraw.Draw(picture)
             if opt.det_model in ('yolo', 'yolo_tiny'):
@@ -110,32 +110,36 @@ if __name__ == '__main__':
                 all_outputs[0, :, 5:5 + num_classes] = 1 / num_classes  # all boxes are now of the same class
                 outputs = non_max_suppression(all_outputs, num_classes,
                                               conf_thres=opt.conf_thres, nms_thres=opt.nms_thres)
-                predictions = outputs[0][:, :4]
+                predictions = outputs[0][:, :4] if outputs[0] is not None else None
             else:
                 raise NotImplementedError(f"Can't get predictions for {opt.det_model}")
-            for prediction in predictions:
-                x0, y0, x1, y1 = prediction
-                xc, yc = (x0 + x1) / 2, (y0 + y1) / 2
-                xc, yc = xc.item(), yc.item()
-                x0, y0, x1, y1 = [int(x.item()) for x in [x0, y0, x1, y1]]
-                if (i + 1) % opt.draw_every == 0:
-                    draw.rectangle((x0, y0, x1, y1), outline=(240, 0, 200), width=1)
-                crop = image[:, x0:x1, y0:y1]
-                padded_size = max(crop.shape[1:])
-                padded_add = padded_size - min(crop.shape[1:])
-                if crop.shape[1] > crop.shape[2]:
-                    padding = (padded_add // 2, padded_add - padded_add // 2)
-                else:
-                    padding = (0, 0, padded_add // 2, padded_add - padded_add // 2)
-                crop = F.pad(crop, padding, value=128 / 255)
-                crop = T.Resize(class_img_size[opt.class_model])(crop)
-                outputs = classifier(crop.unsqueeze(0))
-                _, pred = torch.max(outputs.data, 1)
-                pred = int(pred.item())
-                labels += class2uni[pred] + ' ' + str(int(xc)) + ' ' + str(int(yc)) + ' '
+            if predictions is None:
+                print(f"No bboxes found for sample {i}")
+                labels += " "
+            else:
+                for prediction in predictions:
+                    x0, y0, x1, y1 = prediction
+                    xc, yc = (x0 + x1) / 2, (y0 + y1) / 2
+                    xc, yc = xc.item(), yc.item()
+                    x0, y0, x1, y1 = [int(x.item()) for x in [x0, y0, x1, y1]]
+                    if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
+                        draw.rectangle((x0, y0, x1, y1), outline=(240, 0, 200), width=1)
+                    crop = image[:, x0:x1, y0:y1]
+                    padded_size = max(crop.shape[1:])
+                    padded_add = padded_size - min(crop.shape[1:])
+                    if crop.shape[1] > crop.shape[2]:
+                        padding = (padded_add // 2, padded_add - padded_add // 2)
+                    else:
+                        padding = (0, 0, padded_add // 2, padded_add - padded_add // 2)
+                    crop = F.pad(crop, padding, value=128 / 255)
+                    crop = T.Resize(class_img_size[opt.class_model])(crop)
+                    outputs = classifier(crop.unsqueeze(0))
+                    _, pred = torch.max(outputs.data, 1)
+                    pred = int(pred.item())
+                    labels += class2uni[pred] + ' ' + str(int(xc)) + ' ' + str(int(yc)) + ' '
 
-            if (i + 1) % opt.draw_every == 0:
-                picture.show()
+                if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
+                    picture.show()
 
             needed_row = pd.DataFrame({'image_id': [file_name], 'labels': [labels[:-1]], 'Useage': ['Public']})
             pred_df = pd.concat([pred_df, needed_row])
