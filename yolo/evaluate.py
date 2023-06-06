@@ -7,6 +7,7 @@ from dataset import DetectionDataset, class2uni
 import torchvision.transforms as T
 from tqdm.notebook import tqdm
 import pandas as pd
+from det_class_combine import get_all_outputs
 
 
 parser = argparse.ArgumentParser()
@@ -30,41 +31,21 @@ if __name__ == '__main__':
     model = model.to(device)
 
     stride = opt.stride
-    yolo_img_size= 416
+    yolo_img_size = 416
 
     train_ds = DetectionDataset('train', max_size=1024, transforms=T.Compose([T.ToTensor()]),
-                                crop_size=1024, threshold=0.1, mode='valid', max_labels=300)
+                                apply_crop=False, threshold=0.1, mode='valid', max_labels=300)
 
     pred_df = pd.DataFrame()
     for i in tqdm(range(len(train_ds))):
         image_tensor = train_ds[i][0]
         file_name = basename(normpath(train_ds.images[i]['file']))[:-4]
-        all_outputs = []
-        for x0 in range(0, image_tensor.shape[2], stride):
-            x = x0
-            if x0 + yolo_img_size > image_tensor.shape[2]:
-                x = image_tensor.shape[2] - yolo_img_size
-            for y0 in range(0, image_tensor.shape[1], stride):
-                y = y0
-                if y0 + yolo_img_size > image_tensor.shape[1]:
-                    y = image_tensor.shape[1] - yolo_img_size
-                current_image = image_tensor[:, y:y + yolo_img_size, x:x + yolo_img_size].to(device).unsqueeze(0)
-                with torch.no_grad():
-                    output = model(current_image)
-                    outputc = output.clone()
-                    outputc[0][:, 0] += x
-                    outputc[0][:, 1] += y
-                    all_outputs.append(outputc)
-
-                if y == image_tensor.shape[1] - yolo_img_size:
-                    break
-            if x == image_tensor.shape[2] - yolo_img_size:
-                break
-        all_outputs = torch.cat(all_outputs, 1)
+        with torch.no_grad():
+            all_outputs = get_all_outputs(model, image_tensor)
 
         outputs = non_max_suppression(all_outputs, 4781, conf_thres=opt.conf_thres, nms_thres=opt.nms_thres)
         labels = ''
-        output_sorted_ind = outputs[0][:, 4].sort(reversed=True)[1]
+        output_sorted_ind = outputs[0][:, 4].sort(descending=True)[1]
         for idx, pred in enumerate(outputs[0][output_sorted_ind]):
             if idx >= 1200:
                 break
