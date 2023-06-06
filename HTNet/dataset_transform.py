@@ -1,3 +1,4 @@
+import mmengine
 import mmcv
 import pandas as pd
 import numpy as np
@@ -19,10 +20,17 @@ def iter_bboxes(labels):
 
 
 def prepare_train():
-    df = pd.read_csv('../data/train.csv', keep_default_na=False)
-    img_dir = Path('../data/train')
+    df = pd.read_csv('./data/train.csv', keep_default_na=False)
+    img_dir = Path('./data/train')
 
-    unicode_translation = pd.read_csv('../data/unicode_translation.csv')
+    unicode_translation = pd.read_csv('./data/unicode_translation.csv')
+    forgotten = [{'Unicode': 'U+770C', 'char': '県'},
+                 {'Unicode': 'U+4FA1', 'char': '価'},
+                 {'Unicode': 'U+7A83', 'char': '窃'},
+                 {'Unicode': 'U+515A', 'char': '党'},
+                 {'Unicode': 'U+5E81', 'char': '庁'},
+                 {'Unicode': 'U+5039', 'char': '倹'}]
+    unicode_translation = pd.concat([unicode_translation, pd.DataFrame.from_records(forgotten)])
     unicode2class = dict(
         zip(unicode_translation['Unicode'], unicode_translation.index.values))
 
@@ -52,14 +60,14 @@ def prepare_train():
 
     import random
     random.shuffle(images)
-    mmcv.dump([im for im in images if im['filename'].startswith('umgy')], '../data/dval.pkl')
-    mmcv.dump([im for im in images if not im['filename'].startswith('umgy')], '../data/dtrain.pkl')
-    mmcv.dump(images, '../data/dtrainval.pkl')
+    mmengine.dump([im for im in images if im['filename'].startswith('umgy')], './data/dval.pkl')
+    mmengine.dump([im for im in images if not im['filename'].startswith('umgy')], './data/dtrain.pkl')
+    mmengine.dump(images, './data/dtrainval.pkl')
 
 
 def prepare_test():
-    df = pd.read_csv('../data/sample_submission.csv', keep_default_na=False)
-    img_dir = Path('../data/test_images')
+    df = pd.read_csv('./data/sample_submission.csv', keep_default_na=False)
+    img_dir = Path('./data/test')
 
     images = []
     for img_id, row in tqdm(df.iterrows()):
@@ -76,7 +84,7 @@ def prepare_test():
                 'labels_ignore': np.array([], dtype=np.int64).reshape(-1, )
             }
         })
-    mmcv.dump(images, '../data/dtest.pkl')
+    mmengine.dump(images, './data/dtest.pkl')
 
 
 if __name__ == "__main__":
