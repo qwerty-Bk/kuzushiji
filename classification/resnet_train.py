@@ -8,6 +8,7 @@ from dataset import ClassificationDataset
 import argparse
 from tqdm.notebook import tqdm
 import os
+import numpy as np
 
 
 parser = argparse.ArgumentParser()
@@ -32,6 +33,7 @@ if __name__ == '__main__':
     os.makedirs(opt.checkpoint_dir, exist_ok=True)
     train_transforms = transforms.Compose([
         transforms.ColorJitter(0.3, 0.5, 0.5, 0.1),
+        transforms.RandomCrop(opt.img_size, padding=20, padding_mode='edge'),
         transforms.ToTensor(),
     ])
     train_ds = ClassificationDataset(opt.img_size, mode='train', transforms=train_transforms)
@@ -50,6 +52,7 @@ if __name__ == '__main__':
     logger = Logger()
 
     for epoch in range(opt.epochs):
+        print(f'Epoch {epoch}')
         train_running_loss = 0
         train_running_correct = 0
         running_counter = 0
