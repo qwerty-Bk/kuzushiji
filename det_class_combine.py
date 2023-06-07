@@ -18,6 +18,7 @@ num_classes = 4781
 detectors = {
     "yolo": Darknet("yolo/yolo.cfg"),
     "yolo_tiny": Darknet("yolo/yolo-tiny.cfg"),
+    "yolo_tiny_oc": Darknet("yolo/yolo-tiny-oc.cfg"),
 }
 
 classifiers = {
@@ -31,7 +32,7 @@ class_img_size = {
 
 def load_weights(model_name, path):
     model = None
-    if model_name in ("yolo", "yolo_tiny"):
+    if model_name.startswith("yolo"):
         model = detectors[model_name]
         model.load_weights(path, device)
     elif model_name == "resnext101":
@@ -134,8 +135,10 @@ if __name__ == '__main__':
             if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
                 picture = Image.fromarray(np.moveaxis(image.to("cpu").numpy() * 255, 0, -1).astype(np.uint8))
                 draw = ImageDraw.Draw(picture)
-            if opt.det_model in ('yolo', 'yolo_tiny'):
+            if opt.det_model.startswith('yolo'):
                 all_outputs = get_all_outputs(detector, image)
+                if opt.det_model.endswith('oc'):
+                    num_classes = 1
                 all_outputs[0, :, 5:5 + num_classes] = 1 / num_classes  # all boxes are now of the same class
                 outputs = non_max_suppression(all_outputs, num_classes,
                                               conf_thres=opt.conf_thres, nms_thres=opt.nms_thres)
