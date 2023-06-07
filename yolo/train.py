@@ -36,14 +36,14 @@ if __name__ == '__main__':
     os.makedirs("yolo/output", exist_ok=True)
     os.makedirs(opt.checkpoint_dir, exist_ok=True)
 
-    hyperparams = parse_model_config(opt.model_config_path[:-4] + '-oc.cfg' if opt.detection_only
-                                     else opt.model_config_path)[0]
+    new_model_config = opt.model_config_path[:-4] + '-oc.cfg' if opt.detection_only else opt.model_config_path
+    hyperparams = parse_model_config(new_model_config)[0]
     learning_rate = float(hyperparams["learning_rate"])
     momentum = float(hyperparams["momentum"])
     decay = float(hyperparams["decay"])
     burn_in = int(hyperparams["burn_in"])
 
-    model = Darknet(opt.model_config_path)
+    model = Darknet(new_model_config)
     model.apply(weights_init_normal)
     if len(opt.weights_path) > 1:
         model.load_weights(opt.weights_path)
