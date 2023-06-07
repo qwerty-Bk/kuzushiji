@@ -19,6 +19,7 @@ detectors = {
     "yolo": Darknet("yolo/yolo.cfg"),
     "yolo_tiny": Darknet("yolo/yolo-tiny.cfg"),
     "yolo_tiny_oc": Darknet("yolo/yolo-tiny-oc.cfg"),
+    'f_rcnn_50': None,
 }
 
 classifiers = {
