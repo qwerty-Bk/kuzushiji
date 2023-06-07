@@ -18,7 +18,6 @@ num_classes = 4781
 detectors = {
     "yolo": Darknet("yolo/yolo.cfg"),
     "yolo_tiny": Darknet("yolo/yolo-tiny.cfg"),
-    'f_rcnn_50': None,
 }
 
 classifiers = {
