@@ -23,7 +23,7 @@ from dataset import DetectionDataset, class2sym
 DEVICE =  'cuda' if torch.cuda.is_available() else 'cpu'
 #DEVICE = 'cpu'
 
-LR = 0.0005
+LR = 0.01
 MOMENTUM = 0.9
 WD = 0.0005
 GAMMA = 0.1

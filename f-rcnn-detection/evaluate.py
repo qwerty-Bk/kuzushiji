@@ -12,6 +12,7 @@ import torchvision
 import torchvision.transforms as T
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
+from torchvision.models.detection.rpn import AnchorGenerator
 import torch.utils.data
 
 from PIL import Image, ImageFile
@@ -22,23 +23,34 @@ from tqdm import tqdm
 from dataset import DetectionDataset, class2sym, class2uni
 from utils import draw_bboxes
 
-DEVICE =  'cuda' if torch.cuda.is_available() else 'cpu'
-#DEVICE = 'cpu'
+#DEVICE =  'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = 'cpu'
 
 def create_model(pretrained):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=pretrained)
+    #model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=pretrained)
+    anchor_sizes = [12, 24, 32, 64, 96]
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+        weights=pretrained,
+        rpn_anchor_generator=AnchorGenerator(
+            sizes=tuple((s,) for s in anchor_sizes),
+            aspect_ratios=tuple((0.5, 1.0, 2.0) for _ in anchor_sizes),
+        ),
+        box_detections_per_img=1000,
+        box_nms_thresh=0.25,
+    )
+
     in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, len(class2sym))
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 2)
 
     #model.load_state_dict(torch.load("./checkpoints/fast-crnn/2023-06-05-13-24-45_epoch_49.path"))
-    model = torch.load("./checkpoints/fast-crnn/2023-06-05-13-24-45_epoch_49.path")
+    model = torch.load("./6_checkpoints/fast-crnn/2023-06-07-01-04-35_epoch_46.path")
 
     return model
 
 def prepare_prediction(batch_image, prediction):
     #print(prediction)
     for i in range(len(prediction)):
-        #print(prediction[i])
+        print(prediction[i])
         boxes = prediction[i]['boxes']
         labels = prediction[i]['labels']
         scores = prediction[i]['scores']
@@ -47,15 +59,15 @@ def prepare_prediction(batch_image, prediction):
         boxes[:,3] = (boxes[:,3] - boxes[:,1]) 
 
 
-        clip_value = (scores >= 0.4).sum().item()
+        #clip_value = (scores >= 0.4).sum().item()  
 
-        boxes = boxes[:clip_value]
-        labels = labels[:clip_value]
+        #boxes = boxes[:clip_value]
+        #labels = labels[:clip_value]
 
-        #image_marked = draw_bboxes(batch_image, boxes, labels)
+        image_marked = draw_bboxes(batch_image, boxes, labels)
           
-        #plt.imshow(image_marked)
-        #plt.show()
+        plt.imshow(image_marked)
+        plt.show()
 
 def fill_submission(image_id, prediction):
     #print(prediction)
@@ -82,11 +94,10 @@ def fill_submission(image_id, prediction):
     str_labels += '\n'
 
     csv_row = str(image_id) + ',' + str_labels
-    with open('submission_1.csv','a') as fd:
+    with open('submission.csv','a') as fd:
         fd.write(csv_row)
 
     return None
-
 
 def build_target(image, bboxes, labels):
     images = image.to(DEVICE)
@@ -112,7 +123,6 @@ def build_target(image, bboxes, labels):
         targets.append({'boxes': bboxes[i], 
                           'labels': labels[i].reshape(-1)})
     return images, targets
-
 
 def fix_pred_loss(predict_loss, x_ind, y_ind, ):
     #print(predict_loss)
@@ -147,27 +157,29 @@ def evaluate(model, dataloader):
 
                 images, targets = build_target(image_cropped, torch.Tensor(bboxes).to(DEVICE), torch.LongTensor(labels))
                 #print(images.size())
+                #print(images, targets)
                 predict_loss = fix_pred_loss(model(images), i, j)
                 answer.extend(predict_loss)
+                break
+            break
 
         #image_t = image[0].clone() * 255
         #image_t = np.moveaxis(image_t.numpy()*255, 0, -1)
         # #print(image_t)
         #image_t = Image.fromarray(image_t.astype(np.uint8))
         # #print(answer)
-        #print(image_id[0])
-        #prepare_prediction(image_t, answer)
-        fill_submission(image_id[0], answer)
+
+        prepare_prediction(image_t, answer)
+        #fill_submission(image_id[0], answer)
 
     return
-
 
 if __name__ == '__main__':
 
     print(DEVICE)
 
     csv_row = 'image_id' + ',' + 'labels\n'
-    with open('submission_1.csv','a') as fd:
+    with open('submission.csv','a') as fd:
         fd.write(csv_row)
 
     transform = T.Compose([T.ColorJitter(0.3, 0.5, 0.5, 0.1),

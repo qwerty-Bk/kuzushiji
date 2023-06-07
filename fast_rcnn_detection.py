@@ -11,6 +11,7 @@ import torchvision
 import torchvision.transforms as T
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights
+from torchvision.models.detection.rpn import AnchorGenerator
 
 import torch.utils.data
 
@@ -23,17 +24,31 @@ from dataset import DetectionDataset, class2sym
 DEVICE =  'cuda' if torch.cuda.is_available() else 'cpu'
 #DEVICE = 'cpu'
 
-LR = 0.0001
+LR = 0.0005
 MOMENTUM = 0.9
-WD = 0.0005
+WD = 0.005
 GAMMA = 0.1
 N_EPOCH = 45
 
 
 def create_model(pretrained):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT)
+#   model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=pretrained)
+
+    anchor_sizes = [12, 24, 32, 64, 96]
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+        weights=pretrained,
+        rpn_anchor_generator=AnchorGenerator(
+            sizes=tuple((s,) for s in anchor_sizes),
+            aspect_ratios=tuple((0.5, 1.0, 2.0) for _ in anchor_sizes),
+        ),
+        box_detections_per_img=1000,
+        box_nms_thresh=0.25,
+    )
+
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 2)
+
+    #model = torch.load("./2_checkpoints/fast-crnn/2023-06-06-06-48-11_epoch_44.path")
 
     return model
 
@@ -80,7 +95,6 @@ def train_one_epoch(model, optimizer, scheduler, dataloader):
     for batch_idx, (image, bboxes, labels) in pcs:
         
         images, targets = build_target(image, torch.Tensor(bboxes).to(DEVICE), torch.LongTensor(labels))
-        #print(targets)
         
         predict_loss = model(images, targets)
 
@@ -107,9 +121,9 @@ def train(model, optimizer, scheduler, dataloader, n_epoch):
         epoch_losses = train_one_epoch(model, optimizer, scheduler, dataloader)
         running_losses.extend(epoch_losses)
 
-        file_name = '3_checkpoints/0.001fast-crnn/' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '_epoch_' + str(i) + '.path'
-        os.makedirs("3_checkpoints", exist_ok=True)
-        os.makedirs("3_checkpoints/0.001fast-crnn", exist_ok=True)
+        file_name = '6_checkpoints/fast-crnn/' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '_epoch_' + str(i + 45) + '.path'
+        os.makedirs("6_checkpoints", exist_ok=True)
+        os.makedirs("6_checkpoints/fast-crnn", exist_ok=True)
         torch.save(model, file_name)
 
     return running_losses
@@ -137,7 +151,7 @@ if __name__ == '__main__':
     transform = T.Compose([T.ToTensor()])
 
     #dataloader = DetectionDataset('train', max_size=2048, crop_size=(512, 512), transforms=transform)
-    dataset = DetectionDataset('train', max_size=2048, crop_size=(512, 512), transforms=transform, max_labels=10)
+    dataset = DetectionDataset('train', max_size=2048, crop_size=(512, 512), transforms=transform, max_labels=300)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True, num_workers=2)
 
     model = create_model(None).to(DEVICE)
@@ -148,14 +162,14 @@ if __name__ == '__main__':
     final_losses = train(model, optimizer, scheduler, dataloader, N_EPOCH)
 
 
-    with open("0.001_3_losses", "wb") as fp:   #Pickling
+    with open("6_losses", "wb") as fp:   #Pickling
         pickle.dump(final_losses, fp)
 
-    with open("0.001_3_file_losses.txt", 'w') as f:
+    with open("6_file_losses.txt", 'w') as f:
         for s in final_losses:
             f.write(str(s) + '\n')
     
-    os.makedirs("3_checkpoints", exist_ok=True)
-    os.makedirs("3_checkpoints/0.001_fast-crnn", exist_ok=True)
-    file_name = '3_checkpoints/0.001fast-crnn/' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '.path'
+    os.makedirs("6_checkpoints", exist_ok=True)
+    os.makedirs("6_checkpoints/fast-crnn", exist_ok=True)
+    file_name = '6_checkpoints/fast-crnn/' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '_45_' + '.path'
     torch.save(model, file_name)
