@@ -18,6 +18,7 @@ num_classes = 4781
 detectors = {
     "yolo": Darknet("yolo/yolo.cfg"),
     "yolo_tiny": Darknet("yolo/yolo-tiny.cfg"),
+    'f_rcnn_50': None,
 }
 
 classifiers = {
@@ -52,6 +53,7 @@ parser.add_argument("--draw-every", type=int, default=0, help="which image to sh
 parser.add_argument("--csv-path", type=str, default="answer.csv", help="file for submission")
 parser.add_argument("--use-cuda", type=bool, default=True, help="whether to use cuda if available")
 parser.add_argument("--cuda-id", type=int, default=0, help="which cuda to use")
+parser.add_argument("--file_name", type=str, default='f_rcnn_predictions.csv', help='path to F-rcnn predictions')
 opt = parser.parse_args()
 
 device = f'cuda:{opt.cuda_id}' if torch.cuda.is_available() and opt.use_cuda else 'cpu'
@@ -80,16 +82,42 @@ def get_all_outputs(model, image_tensor, stride=208, img_size=416):
     all_outputs = torch.cat(all_outputs, 1)
     return all_outputs
 
+def get_frcnn_outputs(df, row_idx, image, file_name):
+    orig_img = np.array(Image.open(f'data/train/{file_name}.jpg'))
+    #print('orig', orig_img.shape)
+    #print('new', image.shape)
+    old_height, old_width, _ = orig_img.shape
+    _, new_height, new_width = image.shape
+    width_k = new_width / old_width
+    height_k = new_height / old_height
+    #print(orig_img.shape)
+    predictions = []
+    row =  df.iloc[row_idx]
+    labels = row['labels'].split()
+    n = len(labels) // 5
+    for i in range(0, n):
+        uni, x, y, w, h = labels[i * 5:(i + 1) * 5]
+        predictions.append([torch.Tensor([int(x)]).to(device) * (width_k), 
+                            torch.Tensor([int(y)]).to(device) * (height_k), 
+                            torch.Tensor([int(x) + int(w)]).to(device) * (width_k), 
+                            torch.Tensor([int(y) + int(h)]).to(device) * (height_k)])
+    return predictions
+
 
 if __name__ == '__main__':
     assert opt.class_model in classifiers.keys()
     assert opt.det_model in detectors.keys()
     classifier = load_weights(opt.class_model, opt.class_weights)
-    detector = load_weights(opt.det_model, opt.det_weights)
     classifier.to(device)
-    detector.to(device)
     classifier.eval()
-    detector.eval()
+    detector = None
+    if opt.det_model in ('yolo', 'yolo_tiny'):
+        detector = load_weights(opt.det_model, opt.det_weights)
+        detector.to(device)
+        detector.eval()
+    df = None
+    if opt.det_model in ('f_rcnn_50, f_rcnn_150'):
+        df = pd.read_csv(opt.file_name,)
 
     transforms = T.Compose([
         T.ToTensor()
@@ -113,6 +141,8 @@ if __name__ == '__main__':
                 outputs = non_max_suppression(all_outputs, num_classes,
                                               conf_thres=opt.conf_thres, nms_thres=opt.nms_thres)
                 predictions = outputs[0][:, :4] if outputs[0] is not None else None
+            elif opt.det_model in ('f_rcnn_50, f_rcnn_150'):
+                predictions = get_frcnn_outputs(df, i, image, file_name)
             else:
                 raise NotImplementedError(f"Can't get predictions for {opt.det_model}")
             if predictions is None:
