@@ -112,7 +112,7 @@ if __name__ == '__main__':
     classifier.to(device)
     classifier.eval()
     detector = None
-    if opt.det_model in ('yolo', 'yolo_tiny'):
+    if opt.det_model.startswith('yolo'):
         detector = load_weights(opt.det_model, opt.det_weights)
         detector.to(device)
         detector.eval()
