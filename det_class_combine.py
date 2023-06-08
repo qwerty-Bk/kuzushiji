@@ -9,14 +9,16 @@ from yolo.utils import non_max_suppression
 from torch.nn import functional as F
 from dataset import class2uni
 import pandas as pd
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from os.path import normpath, basename
+from dataset import class2sym
 
 num_classes = 4781
 
 detectors = {
     "yolo": Darknet("yolo/yolo.cfg"),
+    "yolo_oc": Darknet("yolo/yolo-oc.cfg"),
     "yolo_tiny": Darknet("yolo/yolo-tiny.cfg"),
     "yolo_tiny_oc": Darknet("yolo/yolo-tiny-oc.cfg"),
     'f_rcnn_50': None,
@@ -83,25 +85,23 @@ def get_all_outputs(model, image_tensor, stride=208, img_size=416):
     all_outputs = torch.cat(all_outputs, 1)
     return all_outputs
 
+
 def get_frcnn_outputs(df, row_idx, image, file_name):
     orig_img = np.array(Image.open(f'data/train/{file_name}.jpg'))
-    #print('orig', orig_img.shape)
-    #print('new', image.shape)
     old_height, old_width, _ = orig_img.shape
     _, new_height, new_width = image.shape
     width_k = new_width / old_width
     height_k = new_height / old_height
-    #print(orig_img.shape)
     predictions = []
     row =  df.iloc[row_idx]
     labels = row['labels'].split()
     n = len(labels) // 5
     for i in range(0, n):
         uni, x, y, w, h = labels[i * 5:(i + 1) * 5]
-        predictions.append([torch.Tensor([int(x)]).to(device) * (width_k), 
-                            torch.Tensor([int(y)]).to(device) * (height_k), 
-                            torch.Tensor([int(x) + int(w)]).to(device) * (width_k), 
-                            torch.Tensor([int(y) + int(h)]).to(device) * (height_k)])
+        predictions.append([torch.Tensor([int(x)]).to(device) * width_k,
+                            torch.Tensor([int(y)]).to(device) * height_k,
+                            torch.Tensor([int(x) + int(w)]).to(device) * width_k,
+                            torch.Tensor([int(y) + int(h)]).to(device) * height_k])
     return predictions
 
 
@@ -159,8 +159,6 @@ if __name__ == '__main__':
                     k = 1 if opt.max_size is None else max(orig_img.width, orig_img.height) / opt.max_size
                     xc, yc = xc.item() * k, yc.item() * k
                     x0, y0, x1, y1 = [int(x.item()) for x in [x0, y0, x1, y1]]
-                    if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
-                        draw.rectangle((x0, y0, x1, y1), outline=(240, 0, 200), width=1)
                     crop = image[:, y0:y1, x0:x1]
                     padded_size = max(crop.shape[1:])
                     padded_add = padded_size - min(crop.shape[1:])
@@ -174,6 +172,11 @@ if __name__ == '__main__':
                     _, pred = torch.max(outputs.data, 1)
                     pred = int(pred.item())
                     labels += class2uni[pred] + ' ' + str(int(xc)) + ' ' + str(int(yc)) + ' '
+                    if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
+                        draw.rectangle((x0, y0, x1, y1), outline=(200, 0, 200), width=1)
+                        fnt_size = 20
+                        fnt = ImageFont.truetype("./Arial Unicode MS.TTF", fnt_size)
+                        draw.text((x0 - fnt_size, y0 + (y1 - y0) // 2 - fnt_size // 2), class2sym[pred], fill=(0, 0, 0), font=fnt)
 
                 if opt.draw_every != 0 and (i + 1) % opt.draw_every == 0:
                     picture.show()
