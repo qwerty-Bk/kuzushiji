@@ -168,6 +168,8 @@ if __name__ == '__main__':
                         padding = (0, 0, padded_add // 2, padded_add - padded_add // 2)
                     crop = F.pad(crop, padding, value=128 / 255)
                     crop = T.Resize(class_img_size[opt.class_model])(crop)
+                    if crop.shape[-1] < 4:
+                        continue
                     outputs = classifier(crop.unsqueeze(0).to(device))
                     _, pred = torch.max(outputs.data, 1)
                     pred = int(pred.item())
